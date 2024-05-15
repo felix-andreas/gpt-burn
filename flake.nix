@@ -120,6 +120,7 @@
               }
             ];
           };
+          check = crateClippy;
           package = craneLib.buildPackage (commonArgs // {
             pname = "gpt-burn";
             cargoArtifacts = crateClippy;
@@ -134,9 +135,8 @@
         });
     in
     {
-      devShells = eachSystem (system: {
-        default = (flake system).devShell;
-      });
+      checks = eachSystem (system: { default = (flake system).check; });
+      devShells = eachSystem (system: { default = (flake system).devShell; });
       packages = eachSystem (system: { default = (flake system).package; });
     };
 }
