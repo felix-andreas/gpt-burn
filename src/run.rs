@@ -16,7 +16,7 @@ pub fn run<B: Backend>(
     let mut rng = StdRng::seed_from_u64(seed);
     let mut ids = tokenizer.encode(prompt);
 
-    println!("{BOLD}run{RESET}");
+    print!("{BOLD}{prompt}{RESET}");
     for _ in 0..n_new_tokens {
         let x = {
             let ids_sliced = &ids[(ids.len() as isize - context_length as isize).max(0) as usize..];

@@ -130,7 +130,7 @@ fn main() {
 
             // save trained model
             if save {
-                let model_path = output_path.unwrap_or_else(|| {
+                let output_path = output_path.unwrap_or_else(|| {
                     format!(
                         ".data/gpt_{}k_{}context_{}",
                         model.num_params() >> 10,
@@ -140,21 +140,22 @@ fn main() {
                     .into()
                 });
 
-                println!("{BOLD}store trained model to: {model_path:?}{RESET}");
-                fs::remove_dir_all(&model_path).ok();
-                fs::create_dir_all(&model_path).ok();
+                println!("{BOLD}store trained model to: {output_path:?}{RESET}");
+                fs::remove_dir_all(&output_path).ok();
+                fs::create_dir_all(&output_path).ok();
 
                 /* Uncomment to use `SimpleVowelTokenizer` */
                 // tokenizer.save(&format!("{model_path}/tokenizer.bin"));
 
-                config.save(format!("{model_path:?}/config.json")).unwrap();
+                config.save(output_path.join("config.json")).unwrap();
                 model
                     .clone()
-                    .save_file(format!("{model_path:?}/model"), &CompactRecorder::new())
+                    .save_file(output_path.join("model"), &CompactRecorder::new())
                     .unwrap();
             }
 
             // inference
+            println!("{BOLD}generate example text{RESET}");
             gpt_burn::run(
                 &model,
                 &tokenizer,
