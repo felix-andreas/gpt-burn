@@ -2,7 +2,7 @@
 
 # GPT-Burn 🔥
 
-### Implementation of the GPT architecture in [Burn](https://burn.dev/) 🦀.
+### Implementation of the GPT architecture in Rust 🦀 + [Burn 🔥](https://burn.dev/).
 
 </div>
 
@@ -50,14 +50,14 @@ Values: [2, 0, 3, 9, 0, 19, 0, 9, 0, 16, 10, 15, 1, 6, 1, 7, 13, 15, 11, 0, 17, 
 
 ## CLI options
 
-The `gpt-burn` command has multiple subcommmands:
+The `gpt-burn` command has multiple subcommands:
 
 ```
 Usage: gpt-burn <COMMAND>
 
 Commands:
   train  Train a new model
-  run    Generate text using pre-trained model
+  run    Generate text using a pre-trained model
   help   Print this message or the help of the given subcommand(s)
 
 Options:
@@ -84,23 +84,25 @@ For training, you can pass most hyperparameters as a command-line option:
 Usage: gpt-burn train [OPTIONS]
 
 Options:
-  -o, --output-path <PATH>               
-  -c, --context-length <CONTEXT_LENGTH>  
-  -d, --d-model <D_MODEL>                
-  -l, --n-layers <N_LAYERS>              
-  -n, --n-heads <N_HEADS>                
-  -t, --text-corpus <PATH>               
-  -m, --mega-bytes <MEGA_BYTES>          
-  -e, --epochs <EPOCHS>                  
-  -b, --batch-size <BATCH_SIZE>          
-  -r, --learning-rate <LEARNING_RATE>    
+  -o, --output-path <PATH>
+  -c, --context-length <CONTEXT_LENGTH>
+  -d, --d-model <D_MODEL>
+  -l, --n-layers <N_LAYERS>
+  -n, --n-heads <N_HEADS>
+  -t, --text-corpus <PATH>
+  -m, --mega-bytes <MEGA_BYTES>
+  -e, --epochs <EPOCHS>
+  -b, --batch-size <BATCH_SIZE>
+  -r, --learning-rate <LEARNING_RATE>
   -s, --seed <SEED>                      [default: 0]
-  -x, --no-save                          
-  -h, --help                             Print help
+  -x, --no-save
 ```
 
 ## References
 
+* [GPT-2 Paper](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)
+* [OpenAI's GPT-2 Implementation](https://github.com/openai/gpt-2/blob/master/src/model.py)
+* [Huggingface's GPT-2 Implementation](https://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py)
+* [Visualization of the GPT Architecture](https://en.wikipedia.org/wiki/Generative_pre-trained_transformer#/media/File:Full_GPT_architecture.svg)
 * [Lesson by Andrej Karpathy](https://www.youtube.com/watch?v=kCc8FmEb1nY)
 * [The GPT-3 Architecture, on a Napkin](https://dugas.ch/artificial_curiosity/GPT_architecture.html)
-* [GPT-2 Paper](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)
