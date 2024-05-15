@@ -47,8 +47,8 @@
           };
           nativeDeps = with pkgs;[
             pkg-config
-            stdenv.cc.cc.lib # for burn dataset loader (sqlite )
-            zlib # for burn dataset loader (sqlite )
+            stdenv.cc.cc.lib # for burn dataset loader (sqlite)
+            zlib # for burn dataset loader (sqlite)
             openssl.dev # for burn
             vulkan-headers # for burn
             vulkan-loader # for burn
@@ -72,16 +72,13 @@
               fileset = cargoFiles;
             };
             nativeBuildInputs = with pkgs; (
-              [ mold ]
-              ++ nativeDeps
+              nativeDeps
               ++ l.optionals (pkgs.stdenv.isLinux) [ clang ]
             );
           };
           crateDepsOnly = craneLib.buildDepsOnly (commonArgs // {
             cargoCheckCommandcargo = "check --profile release --all-targets --all-features";
           });
-          # note: it is not trivial to granularly build the packages because cargo complains
-          # if a crate is registered in the workspace but has no source files
           crateClippy = craneLib.cargoClippy (commonArgs // {
             cargoArtifacts = crateDepsOnly;
             cargoClippyExtraArgs = "--all-targets --all-features -- --deny warnings";
