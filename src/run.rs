@@ -2,6 +2,7 @@ use {
     crate::{model::Model, tokenizer::Tokenizer, BOLD, RESET},
     burn::{prelude::*, tensor::activation},
     rand::{distributions::WeightedIndex, prelude::*},
+    std::io::{self, Write},
 };
 
 pub fn run<B: Backend>(
@@ -41,6 +42,7 @@ pub fn run<B: Backend>(
         let prediction = distribution.sample(&mut rng) as usize;
         ids.push(prediction);
         print!("{}", tokenizer.decode(&[prediction]));
+        io::stdout().flush().unwrap();
     }
     println!()
 }
