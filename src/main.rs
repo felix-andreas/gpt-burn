@@ -12,51 +12,53 @@ use {
     gpt_burn::{
         model::{Model, ModelConfig},
         tokenizer::{CharTokenizer, Tokenizer},
-        TrainingConfig, BOLD, RESET,
+        TrainingConfig, BOLD, EXAMPLE_TEXT, RESET,
     },
     std::{
         fs::{self, File},
         io::Read,
+        path::{Path, PathBuf},
     },
 };
 
-// region: Main
-
 fn main() {
-    type B = Wgpu;
     /* Alternatively use CPU backend */
     // type B = burn::backend::ndarray::NdArray;
+    type B = Wgpu;
     type AutoB = Autodiff<B>;
 
     match Cli::parse().command {
         Commands::Train {
-            dataset_path: data_path,
-            model_path,
+            text_corpus,
+            output_path,
             batch_size,
-            n_epochs,
-            n_mega_bytes,
+            epochs,
+            mega_bytes,
             context_length,
-            n_layers,
-            n_heads,
             d_model,
+            layers,
+            n_heads,
             learning_rate,
             save_model,
         } => {
             // cli option defaults
-            let data_path = data_path.as_deref().unwrap_or(".data/corpus.txt");
-            let n_bytes = n_mega_bytes.unwrap_or(10) << 20;
-            // hyperparameters
-            let n_epochs = n_epochs.unwrap_or(50);
+            let data_path = text_corpus
+                .as_deref()
+                .unwrap_or(Path::new(".data/corpus.txt"));
+            let n_bytes = mega_bytes.unwrap_or(10) << 20;
+            // training parameters
+            let n_epochs = epochs.unwrap_or(50);
             let batch_size = batch_size.unwrap_or(64);
             let learning_rate = learning_rate.unwrap_or(3e-4);
+            // model parameters
             let context_length = context_length.unwrap_or(128);
-            let n_layers = n_layers.unwrap_or(6);
-            let n_heads = n_heads.unwrap_or(6);
             let d_model = d_model.unwrap_or(384);
+            let n_layers = layers.unwrap_or(6);
+            let n_heads = n_heads.unwrap_or(6);
 
-            // load data
+            // load text corpus and tokenizer
             println!(
-                "{BOLD}load {} MiB data from: {data_path}{RESET}",
+                "{BOLD}load {} MiB data from: {data_path:?}{RESET}",
                 n_bytes >> 20
             );
             let (data_train, data_test, tokenizer) = {
@@ -124,28 +126,29 @@ fn main() {
             };
             let model = gpt_burn::train(&config, data_train, data_test, save_model);
 
-            // store trained model
-            if save_model {
-                let model_path = model_path.unwrap_or_else(|| {
+            // save trained model
+            if save_model || output_path.is_some() {
+                let model_path = output_path.unwrap_or_else(|| {
                     format!(
                         ".data/gpt_{}k_{}context_{}",
                         model.num_params() >> 10,
                         config.model.context_length,
                         std::time::UNIX_EPOCH.elapsed().unwrap().as_secs()
                     )
+                    .into()
                 });
 
-                println!("{BOLD}store trained model to: {model_path}{RESET}");
+                println!("{BOLD}store trained model to: {model_path:?}{RESET}");
                 fs::remove_dir_all(&model_path).ok();
                 fs::create_dir_all(&model_path).ok();
 
                 /* Uncomment to use `SimpleVowelTokenizer` */
                 // tokenizer.save(&format!("{model_path}/tokenizer.bin"));
 
-                config.save(format!("{model_path}/config.json")).unwrap();
+                config.save(format!("{model_path:?}/config.json")).unwrap();
                 model
                     .clone()
-                    .save_file(format!("{model_path}/model"), &CompactRecorder::new())
+                    .save_file(format!("{model_path:?}/model"), &CompactRecorder::new())
                     .unwrap();
             }
 
@@ -153,7 +156,7 @@ fn main() {
             gpt_burn::run(
                 &model,
                 &tokenizer,
-                EXAMPLE,
+                EXAMPLE_TEXT,
                 2000,
                 config.model.context_length,
             );
@@ -179,15 +182,13 @@ fn main() {
             gpt_burn::run(
                 &model,
                 &tokenizer,
-                &prompt.unwrap_or(EXAMPLE.into()),
+                &prompt.unwrap_or(EXAMPLE_TEXT.into()),
                 n_new_tokens.unwrap_or(1000),
                 config.model.context_length,
             );
         }
     }
 }
-
-const EXAMPLE: &str = "Albert Einstein war ein schweizerisch-US-amerikanischer theoretischer Physiker deutscher Herkunft.";
 
 #[derive(Parser)]
 struct Cli {
@@ -199,22 +200,22 @@ struct Cli {
 enum Commands {
     /// Train a new model
     Train {
+        #[arg(short, long, value_name = "PATH")]
+        output_path: Option<PathBuf>,
+        #[arg(short, long, value_name = "PATH")]
+        text_corpus: Option<PathBuf>,
         #[arg(short, long)]
-        dataset_path: Option<String>,
+        mega_bytes: Option<u64>,
         #[arg(short, long)]
-        model_path: Option<String>,
-        #[arg(short, long)]
-        n_mega_bytes: Option<u64>,
-        #[arg(short, long)]
-        n_epochs: Option<usize>,
+        epochs: Option<usize>,
         #[arg(short, long)]
         batch_size: Option<usize>,
-        #[arg(short, long)]
+        #[arg(short = 'r', long)]
         learning_rate: Option<f64>,
         #[arg(short, long)]
         context_length: Option<usize>,
         #[arg(short, long)]
-        n_layers: Option<usize>,
+        layers: Option<usize>,
         #[arg(short, long)]
         n_heads: Option<usize>,
         #[arg(short, long)]
