@@ -4,7 +4,7 @@ use {
         BOLD, RESET,
     },
     burn::{
-        module::Module,
+        module::{AutodiffModule, Module},
         optim::{AdamWConfig, GradientsParams, Optimizer},
         prelude::*,
         record::CompactRecorder,
@@ -20,11 +20,11 @@ use {
 #[derive(Config)]
 pub struct TrainingConfig {
     pub n_epochs: usize,
-    pub epoch_size: usize,
     pub batch_size: usize,
-    pub eval_size: usize,
-    pub seed: u64,
     pub learning_rate: f64,
+    pub epoch_size: usize,
+    pub validation_size: usize,
+    pub seed: u64,
     pub model: ModelConfig,
     pub optimizer: AdamWConfig,
 }
@@ -32,7 +32,7 @@ pub struct TrainingConfig {
 pub fn train<B: AutodiffBackend>(
     config: &TrainingConfig,
     data_train: Tensor<B, 1, Int>,
-    data_val: Tensor<B, 1, Int>,
+    data_val: Tensor<B::InnerBackend, 1, Int>,
     save_checkpoints: bool,
 ) -> Model<B> {
     let device = data_train.device();
@@ -51,18 +51,19 @@ pub fn train<B: AutodiffBackend>(
     let start = Instant::now();
     for epoch in 0..config.n_epochs {
         // evaluate validation loss
-        // TODO: only inference
         let loss_val = {
             let (x, y) = get_batch(
                 &mut rng,
                 data_val.clone(),
-                config.eval_size,
+                config.validation_size,
                 config.model.context_length,
             );
-            let logits = model.forward(x);
-            let loss = model.loss(logits, y.clone());
+            let model_valid = model.valid();
+            let logits = model_valid.forward(x);
+            let loss = model_valid.loss(logits, y.clone());
             loss.into_scalar().elem::<f64>()
         };
+
         let mut loss_sum = 0.0;
         for _ in 0..config.epoch_size {
             let (x, y) = get_batch(
@@ -84,6 +85,7 @@ pub fn train<B: AutodiffBackend>(
         }
 
         let elapsed = start.elapsed();
+
         let format_duration = |duration: Duration| {
             let seconds = duration.as_secs() % 60;
             let minutes = (duration.as_secs() / 60) % 60;

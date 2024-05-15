@@ -47,7 +47,7 @@ fn main() {
             let n_bytes = n_mega_bytes.unwrap_or(10) << 20;
             // hyperparameters
             let n_epochs = n_epochs.unwrap_or(50);
-            let batch_size = batch_size.unwrap_or(50);
+            let batch_size = batch_size.unwrap_or(64);
             let learning_rate = learning_rate.unwrap_or(3e-4);
             let context_length = context_length.unwrap_or(128);
             let n_layers = n_layers.unwrap_or(6);
@@ -92,7 +92,7 @@ fn main() {
                 );
 
                 let n_test = test.len();
-                let data_test = Tensor::<AutoB, 1, Int>::from_data(
+                let data_test = Tensor::<B, 1, Int>::from_data(
                     Data::new(
                         test.into_iter().map(|e| e as i32).collect(),
                         Shape::new([n_test]),
@@ -105,14 +105,14 @@ fn main() {
 
             // train
             let config = TrainingConfig {
-                n_epochs: n_epochs,
-                epoch_size: 100,
+                n_epochs,
                 batch_size,
-                eval_size: 128,
+                epoch_size: 100,
+                validation_size: 128,
                 seed: 0,
                 learning_rate,
                 model: ModelConfig {
-                    context_length: 128,
+                    context_length,
                     vocab_size: tokenizer.vocab_size(),
                     d_model,
                     d_hidden: 4 * d_model,
@@ -130,7 +130,7 @@ fn main() {
                     format!(
                         ".data/gpt_{}k_{}context_{}",
                         model.num_params() >> 10,
-                        context_length,
+                        config.model.context_length,
                         std::time::UNIX_EPOCH.elapsed().unwrap().as_secs()
                     )
                 });
