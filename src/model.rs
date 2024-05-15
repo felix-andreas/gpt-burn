@@ -39,15 +39,32 @@ pub struct ModelConfig {
 impl ModelConfig {
     pub fn init<B: Backend>(&self, device: &B::Device) -> Model<B> {
         Model {
-            token_embedding: EmbeddingConfig::new(self.vocab_size, self.d_model).init(device),
+            token_embedding: EmbeddingConfig::new(self.vocab_size, self.d_model)
+                .with_initializer(nn::Initializer::Normal {
+                    mean: 0.0,
+                    std: 0.02,
+                })
+                .init(device),
             positional_embedding: EmbeddingConfig::new(self.context_length, self.d_model)
+                .with_initializer(nn::Initializer::Normal {
+                    mean: 0.0,
+                    std: 0.02,
+                })
                 .init(device),
             dropout: DropoutConfig::new(self.dropout).init(),
             blocks: (0..self.n_layers)
-                .map(|_| BlockConfig::new(self.d_model, self.d_hidden, self.n_heads).init(device))
+                .map(|_| {
+                    BlockConfig::new(self.d_model, self.d_hidden, self.n_heads, self.n_layers)
+                        .init(device)
+                })
                 .collect(),
             norm: LayerNormConfig::new(self.d_model).init(device),
-            linear: LinearConfig::new(self.d_model, self.vocab_size).init(device),
+            linear: LinearConfig::new(self.d_model, self.vocab_size)
+                .with_initializer(nn::Initializer::Normal {
+                    mean: 0.0,
+                    std: 0.02,
+                })
+                .init(device),
         }
     }
 }
@@ -88,6 +105,8 @@ pub struct BlockConfig {
     d_model: usize,
     d_hidden: usize,
     n_heads: usize,
+    // we need to know this for weight initialization
+    n_layers: usize,
     #[config(default = "0.2")]
     dropout: f64,
 }
@@ -96,9 +115,11 @@ impl BlockConfig {
     fn init<B: Backend>(&self, device: &B::Device) -> Block<B> {
         Block {
             norm_1: LayerNormConfig::new(self.d_model).init(device),
-            multi_head: MultiHeadAttentionConfig::new(self.d_model, self.n_heads).init(device),
+            multi_head: MultiHeadAttentionConfig::new(self.d_model, self.n_heads, self.n_layers)
+                .init(device),
             norm_2: LayerNormConfig::new(self.d_model).init(device),
-            pwff: PositionWiseFeedForwardConfig::new(self.d_model, self.d_hidden).init(device),
+            pwff: PositionWiseFeedForwardConfig::new(self.d_model, self.d_hidden, self.n_layers)
+                .init(device),
         }
     }
 }
@@ -128,6 +149,7 @@ impl<B: Backend> Block<B> {
 struct MultiHeadAttentionConfig {
     d_model: usize,
     n_heads: usize,
+    n_layers: usize,
     #[config(default = "0.2")]
     dropout: f64,
 }
@@ -141,15 +163,32 @@ impl MultiHeadAttentionConfig {
             d_k,
             query: nn::LinearConfig::new(self.d_model, self.d_model)
                 .with_bias(false)
+                .with_initializer(nn::Initializer::Normal {
+                    mean: 0.0,
+                    std: 0.02,
+                })
                 .init(device),
             key: nn::LinearConfig::new(self.d_model, self.d_model)
                 .with_bias(false)
+                .with_initializer(nn::Initializer::Normal {
+                    mean: 0.0,
+                    std: 0.02,
+                })
                 .init(device),
             value: nn::LinearConfig::new(self.d_model, self.d_model)
                 .with_bias(false)
+                .with_initializer(nn::Initializer::Normal {
+                    mean: 0.0,
+                    std: 0.02,
+                })
                 .init(device),
             out: nn::LinearConfig::new(self.d_model, self.d_model)
                 .with_bias(false)
+                // account for accumulation of residual path (see gpt-2 paper section 2.3.)
+                .with_initializer(nn::Initializer::Normal {
+                    mean: 0.0,
+                    std: 0.02 / (2.0 * self.n_layers as f64).sqrt(),
+                })
                 .init(device),
             attn_dropout: nn::DropoutConfig::new(self.dropout).init(),
             resid_dropout: nn::DropoutConfig::new(self.dropout).init(),
@@ -202,6 +241,7 @@ impl<B: Backend> MultiHeadAttention<B> {
 pub struct PositionWiseFeedForwardConfig {
     pub d_model: usize,
     pub d_hidden: usize,
+    pub n_layer: usize,
     #[config(default = 0.2)]
     pub dropout: f64,
 }
@@ -209,9 +249,20 @@ pub struct PositionWiseFeedForwardConfig {
 impl PositionWiseFeedForwardConfig {
     pub fn init<B: Backend>(&self, device: &B::Device) -> PositionWiseFeedForward<B> {
         PositionWiseFeedForward {
-            linear_1: LinearConfig::new(self.d_model, self.d_hidden).init(device),
+            linear_1: LinearConfig::new(self.d_model, self.d_hidden)
+                .with_initializer(nn::Initializer::Normal {
+                    mean: 0.0,
+                    std: 0.02,
+                })
+                .init(device),
             gelu: Gelu::new(),
-            linear_2: LinearConfig::new(self.d_hidden, self.d_model).init(device),
+            linear_2: LinearConfig::new(self.d_hidden, self.d_model)
+                // account for accumulation of residual path (see gpt-2 paper section 2.3.)
+                .with_initializer(nn::Initializer::Normal {
+                    mean: 0.0,
+                    std: 0.02 / (2.0 * self.n_layer as f64).sqrt(),
+                })
+                .init(device),
             dropout: DropoutConfig::new(self.dropout).init(),
         }
     }
