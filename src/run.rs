@@ -11,13 +11,11 @@ pub fn run<B: Backend>(
     n_new_tokens: usize,
     context_length: usize,
 ) {
-    println!("{BOLD}run{RESET}");
     let device = <B as Backend>::Device::default();
-    // TODO: add seed
-    let mut rng = rand::thread_rng();
-    // TODO: inference only!
+    let mut rng = StdRng::seed_from_u64(0);
     let mut ids = tokenizer.encode(prompt);
 
+    println!("{BOLD}run{RESET}");
     for _ in 0..n_new_tokens {
         let x = {
             let ids_sliced = &ids[(ids.len() as isize - context_length as isize).max(0) as usize..];

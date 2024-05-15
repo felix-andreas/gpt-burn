@@ -22,6 +22,11 @@ TODO
 
 ## Tokenizer
 
+* uses 
+* Alternatively a simple tokenizer which breaks at vowels can be used:
+
+TOOD: show example
+
 ## Options
 
 ```

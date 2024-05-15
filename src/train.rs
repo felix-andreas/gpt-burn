@@ -35,8 +35,8 @@ pub fn train<B: AutodiffBackend>(
     data_val: Tensor<B, 1, Int>,
     save_checkpoints: bool,
 ) -> Model<B> {
-    let mut rng = rand::thread_rng(); // TODO: add seed
     let device = data_train.device();
+    let mut rng = StdRng::seed_from_u64(config.seed);
 
     B::seed(config.seed);
 
@@ -48,7 +48,6 @@ pub fn train<B: AutodiffBackend>(
         model.num_params(),
         config
     );
-
     let start = Instant::now();
     for epoch in 0..config.n_epochs {
         // evaluate validation loss
@@ -126,7 +125,7 @@ pub fn train<B: AutodiffBackend>(
 
 #[allow(clippy::single_range_in_vec_init)]
 fn get_batch<B: Backend>(
-    rng: &mut ThreadRng,
+    rng: &mut impl Rng,
     data: Tensor<B, 1, Int>,
     batch_size: usize,
     context_length: usize,
