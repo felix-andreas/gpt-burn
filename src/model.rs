@@ -11,10 +11,13 @@ use {
     std::fmt::Debug,
 };
 
+// Model
+
 #[derive(Debug, Module)]
 pub struct Model<B: Backend> {
     token_embedding: Embedding<B>,
     positional_embedding: Embedding<B>,
+    dropout: nn::Dropout,
     blocks: Vec<Block<B>>,
     norm: LayerNorm<B>,
     linear: Linear<B>,
@@ -38,37 +41,33 @@ impl ModelConfig {
             token_embedding: EmbeddingConfig::new(self.vocab_size, self.d_model).init(device),
             positional_embedding: EmbeddingConfig::new(self.context_length, self.d_model)
                 .init(device),
-            linear: LinearConfig::new(self.d_model, self.vocab_size).init(device),
+            dropout: DropoutConfig::new(self.dropout).init(),
             blocks: (0..self.n_layers)
                 .map(|_| BlockConfig::new(self.d_model, self.d_hidden, self.n_heads).init(device))
                 .collect(),
             norm: LayerNormConfig::new(self.d_model).init(device),
+            linear: LinearConfig::new(self.d_model, self.vocab_size).init(device),
         }
     }
 }
 
 impl<B: Backend> Model<B> {
     pub fn forward(&self, input: Tensor<B, 2, Int>) -> Tensor<B, 3> {
-        let [_, t] = input.dims();
-
         let x = input.clone();
 
         let x = {
-            let emb_tok = self.token_embedding.forward(x);
-
-            let emb_pos = self
-                .positional_embedding
-                .forward(Tensor::arange(0..(t as i64), &input.device()).unsqueeze());
+            let emb_tok = self.token_embedding.forward(x.clone());
+            let emb_pos = {
+                let [_, t] = input.dims();
+                self.positional_embedding
+                    .forward(Tensor::arange(0..(t as i64), &x.device()).unsqueeze())
+            };
             emb_tok + emb_pos
         };
-
-        let mut x = x;
-        for block in self.blocks.iter() {
-            x = block.forward(x);
-        }
-
-        x = self.norm.forward(x);
-        x = self.linear.forward(x);
+        let x = self.dropout.forward(x);
+        let x = self.blocks.iter().fold(x, |x, block| block.forward(x));
+        let x = self.norm.forward(x);
+        let x = self.linear.forward(x);
 
         x
     }
@@ -95,30 +94,30 @@ pub struct BlockConfig {
 impl BlockConfig {
     fn init<B: Backend>(&self, device: &B::Device) -> Block<B> {
         Block {
-            multi_head: MultiHeadAttentionConfig::new(self.d_model, self.n_heads).init(device),
-            pwff: PositionWiseFeedForwardConfig::new(self.d_model, self.d_hidden).init(device),
             norm_1: LayerNormConfig::new(self.d_model).init(device),
+            multi_head: MultiHeadAttentionConfig::new(self.d_model, self.n_heads).init(device),
             norm_2: LayerNormConfig::new(self.d_model).init(device),
+            pwff: PositionWiseFeedForwardConfig::new(self.d_model, self.d_hidden).init(device),
         }
     }
 }
 
 #[derive(Debug, Module)]
 struct Block<B: Backend> {
-    multi_head: MultiHeadAttention<B>,
-    pwff: PositionWiseFeedForward<B>,
     norm_1: LayerNorm<B>,
+    multi_head: MultiHeadAttention<B>,
     norm_2: LayerNorm<B>,
+    pwff: PositionWiseFeedForward<B>,
 }
 
 impl<B: Backend> Block<B> {
     fn forward(&self, input: Tensor<B, 3>) -> Tensor<B, 3> {
         let x = input.clone();
-        let x = self.norm_1.forward(x);
-        let x = x.clone() + self.multi_head.forward(x);
-        let x = self.norm_2.forward(x);
 
-        x.clone() + self.pwff.forward(x)
+        let x = x.clone() + self.multi_head.forward(self.norm_1.forward(x));
+        let x = x.clone() + self.pwff.forward(self.norm_2.forward(x));
+
+        x
     }
 }
 
@@ -151,8 +150,8 @@ impl MultiHeadAttentionConfig {
             out: nn::LinearConfig::new(self.d_model, self.d_model)
                 .with_bias(false)
                 .init(device),
-            dropout: nn::DropoutConfig::new(self.dropout).init(),
-            activation: nn::Gelu::new(),
+            attn_dropout: nn::DropoutConfig::new(self.dropout).init(),
+            resid_dropout: nn::DropoutConfig::new(self.dropout).init(),
         }
     }
 }
@@ -164,9 +163,9 @@ struct MultiHeadAttention<B: Backend> {
     query: nn::Linear<B>,
     key: nn::Linear<B>,
     value: nn::Linear<B>,
+    attn_dropout: nn::Dropout,
     out: nn::Linear<B>,
-    dropout: nn::Dropout,
-    activation: nn::Gelu,
+    resid_dropout: nn::Dropout,
 }
 
 impl<B: Backend> MultiHeadAttention<B> {
@@ -187,10 +186,10 @@ impl<B: Backend> MultiHeadAttention<B> {
             x.mask_fill(mask.unsqueeze(), f32::NEG_INFINITY) // if NaN try 1e-4
         };
         let x = activation::softmax(x, 3);
-        let x = self.dropout.forward(x);
+        let x = self.attn_dropout.forward(x);
         let x = x.matmul(v);
-
         let x = x.swap_dims(1, 2).reshape([b, t, self.n_heads * self.d_k]);
+        let x = self.resid_dropout.forward(x);
 
         self.out.forward(x)
     }
@@ -209,28 +208,28 @@ pub struct PositionWiseFeedForwardConfig {
 impl PositionWiseFeedForwardConfig {
     pub fn init<B: Backend>(&self, device: &B::Device) -> PositionWiseFeedForward<B> {
         PositionWiseFeedForward {
-            linear_inner: LinearConfig::new(self.d_model, self.d_hidden).init(device),
-            linear_outer: LinearConfig::new(self.d_hidden, self.d_model).init(device),
-            dropout: DropoutConfig::new(self.dropout).init(),
+            linear_1: LinearConfig::new(self.d_model, self.d_hidden).init(device),
             gelu: Gelu::new(),
+            linear_2: LinearConfig::new(self.d_hidden, self.d_model).init(device),
+            dropout: DropoutConfig::new(self.dropout).init(),
         }
     }
 }
 
 #[derive(Debug, Module)]
 pub struct PositionWiseFeedForward<B: Backend> {
-    linear_inner: nn::Linear<B>,
-    linear_outer: nn::Linear<B>,
-    dropout: nn::Dropout,
+    linear_1: nn::Linear<B>,
     gelu: nn::Gelu,
+    linear_2: nn::Linear<B>,
+    dropout: nn::Dropout,
 }
 
 impl<B: Backend> PositionWiseFeedForward<B> {
     pub fn forward<const D: usize>(&self, input: Tensor<B, D>) -> Tensor<B, D> {
-        let x = self.linear_inner.forward(input);
+        let x = self.linear_1.forward(input);
         let x = self.gelu.forward(x);
+        let x = self.linear_2.forward(x);
         let x = self.dropout.forward(x);
-
-        self.linear_outer.forward(x)
+        x
     }
 }
