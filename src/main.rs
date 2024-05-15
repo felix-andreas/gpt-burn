@@ -31,21 +31,23 @@ fn main() {
         Commands::Train {
             text_corpus,
             output_path,
+            no_save,
             batch_size,
             epochs,
             mega_bytes,
             context_length,
             d_model,
-            layers,
+            n_layers,
             n_heads,
             learning_rate,
-            save_model,
+            seed,
         } => {
             // cli option defaults
             let data_path = text_corpus
                 .as_deref()
                 .unwrap_or(Path::new(".data/corpus.txt"));
             let n_bytes = mega_bytes.unwrap_or(10) << 20;
+            let save = !no_save;
             // training parameters
             let n_epochs = epochs.unwrap_or(50);
             let batch_size = batch_size.unwrap_or(64);
@@ -53,7 +55,7 @@ fn main() {
             // model parameters
             let context_length = context_length.unwrap_or(128);
             let d_model = d_model.unwrap_or(384);
-            let n_layers = layers.unwrap_or(6);
+            let n_layers = n_layers.unwrap_or(6);
             let n_heads = n_heads.unwrap_or(6);
 
             // load text corpus and tokenizer
@@ -111,7 +113,7 @@ fn main() {
                 batch_size,
                 epoch_size: 100,
                 validation_size: 128,
-                seed: 0,
+                seed,
                 learning_rate,
                 model: ModelConfig {
                     context_length,
@@ -124,10 +126,10 @@ fn main() {
                 },
                 optimizer: AdamWConfig::new(),
             };
-            let model = gpt_burn::train(&config, data_train, data_test, save_model);
+            let model = gpt_burn::train(&config, data_train, data_test, save);
 
             // save trained model
-            if save_model || output_path.is_some() {
+            if save {
                 let model_path = output_path.unwrap_or_else(|| {
                     format!(
                         ".data/gpt_{}k_{}context_{}",
@@ -159,12 +161,14 @@ fn main() {
                 EXAMPLE_TEXT,
                 2000,
                 config.model.context_length,
+                seed,
             );
         }
         Commands::Run {
             model_path: path,
             prompt,
             n_new_tokens,
+            seed,
         } => {
             let device = <B as Backend>::Device::default();
 
@@ -185,6 +189,7 @@ fn main() {
                 &prompt.unwrap_or(EXAMPLE_TEXT.into()),
                 n_new_tokens.unwrap_or(1000),
                 config.model.context_length,
+                seed,
             );
         }
     }
@@ -202,6 +207,14 @@ enum Commands {
     Train {
         #[arg(short, long, value_name = "PATH")]
         output_path: Option<PathBuf>,
+        #[arg(short, long)]
+        context_length: Option<usize>,
+        #[arg(short, long)]
+        d_model: Option<usize>,
+        #[arg(short = 'l', long)]
+        n_layers: Option<usize>,
+        #[arg(short, long)]
+        n_heads: Option<usize>,
         #[arg(short, long, value_name = "PATH")]
         text_corpus: Option<PathBuf>,
         #[arg(short, long)]
@@ -212,16 +225,10 @@ enum Commands {
         batch_size: Option<usize>,
         #[arg(short = 'r', long)]
         learning_rate: Option<f64>,
-        #[arg(short, long)]
-        context_length: Option<usize>,
-        #[arg(short, long)]
-        layers: Option<usize>,
-        #[arg(short, long)]
-        n_heads: Option<usize>,
-        #[arg(short, long)]
-        d_model: Option<usize>,
-        #[arg(short, long)]
-        save_model: bool,
+        #[arg(short, long, default_value_t = 0)]
+        seed: u64,
+        #[arg(short = 'x', long)]
+        no_save: bool,
     },
     /// Generate text using pre-trained model
     Run {
@@ -230,5 +237,7 @@ enum Commands {
         prompt: Option<String>,
         #[arg(short, long)]
         n_new_tokens: Option<usize>,
+        #[arg(short, long, default_value_t = 0)]
+        seed: u64,
     },
 }

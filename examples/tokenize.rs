@@ -30,7 +30,7 @@ fn main() {
     {
         let tokenizer = {
             let vocab_size = 99;
-            let tokens = SimpleVowelTokenizer::tokenize(&EXAMPLE_TEXT).collect::<Vec<_>>();
+            let tokens = SimpleVowelTokenizer::tokenize(EXAMPLE_TEXT).collect::<Vec<_>>();
             SimpleVowelTokenizer::new(&tokens, vocab_size)
         };
         print_tokens(&tokenizer);

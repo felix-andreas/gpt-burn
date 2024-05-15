@@ -64,25 +64,6 @@ Options:
   -h, --help  Print help
 ```
 
-For training, you can pass most hyperparameters as a command-line option:
-
-```
-Usage: gpt-burn train [OPTIONS]
-
-Options:
-  -o, --output-path <PATH>
-  -t, --text-corpus <PATH>
-  -m, --mega-bytes <MEGA_BYTES>
-  -e, --epochs <EPOCHS>
-  -b, --batch-size <BATCH_SIZE>
-  -r, --learning-rate <LEARNING_RATE>
-  -c, --context-length <CONTEXT_LENGTH>
-  -l, --layers <LAYERS>
-  -n, --n-heads <N_HEADS>
-  -d, --d-model <D_MODEL>
-  -s, --save-model
-```
-
 For inference, you can pass a model path and the number of new tokens that should be generated:
 
 ```
@@ -94,6 +75,28 @@ Arguments:
 Options:
   -p, --prompt <PROMPT>
   -n, --n-new-tokens <N_NEW_TOKENS>
+  -s, --seed <SEED>                  [default: 0]
+```
+
+For training, you can pass most hyperparameters as a command-line option:
+
+```
+Usage: gpt-burn train [OPTIONS]
+
+Options:
+  -o, --output-path <PATH>               
+  -c, --context-length <CONTEXT_LENGTH>  
+  -d, --d-model <D_MODEL>                
+  -l, --n-layers <N_LAYERS>              
+  -n, --n-heads <N_HEADS>                
+  -t, --text-corpus <PATH>               
+  -m, --mega-bytes <MEGA_BYTES>          
+  -e, --epochs <EPOCHS>                  
+  -b, --batch-size <BATCH_SIZE>          
+  -r, --learning-rate <LEARNING_RATE>    
+  -s, --seed <SEED>                      [default: 0]
+  -x, --no-save                          
+  -h, --help                             Print help
 ```
 
 ## References

@@ -111,6 +111,7 @@ impl SimpleVowelTokenizer {
         bincode::deserialize_from(&mut reader).unwrap()
     }
 
+    // TODO: currently drops last token
     pub fn tokenize(text: &str) -> impl Iterator<Item = &str> {
         let mut token_start = 0;
         let mut prev_char = 'x'; // dummy value

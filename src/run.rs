@@ -10,9 +10,10 @@ pub fn run<B: Backend>(
     prompt: &str,
     n_new_tokens: usize,
     context_length: usize,
+    seed: u64,
 ) {
     let device = <B as Backend>::Device::default();
-    let mut rng = StdRng::seed_from_u64(0);
+    let mut rng = StdRng::seed_from_u64(seed);
     let mut ids = tokenizer.encode(prompt);
 
     println!("{BOLD}run{RESET}");
