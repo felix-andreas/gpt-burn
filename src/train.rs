@@ -7,10 +7,14 @@ use {
         module::Module,
         optim::{AdamWConfig, GradientsParams, Optimizer},
         prelude::*,
+        record::CompactRecorder,
         tensor::backend::AutodiffBackend,
     },
     rand::prelude::*,
-    std::time::{Duration, Instant},
+    std::{
+        fs,
+        time::{Duration, Instant},
+    },
 };
 
 #[derive(Config)]
@@ -29,6 +33,7 @@ pub fn train<B: AutodiffBackend>(
     config: &TrainingConfig,
     data_train: Tensor<B, 1, Int>,
     data_val: Tensor<B, 1, Int>,
+    save_checkpoints: bool,
 ) -> Model<B> {
     let mut rng = rand::thread_rng(); // TODO: add seed
     let device = data_train.device();
@@ -36,13 +41,15 @@ pub fn train<B: AutodiffBackend>(
     B::seed(config.seed);
 
     let mut model: Model<B> = config.model.init(&device);
-    println!(
-        "{BOLD}new model{RESET} - parameters: {}, {:?}",
-        model.num_params(),
-        config.model
-    );
     let mut optimizer = config.optimizer.init::<B, Model<B>>();
 
+    println!(
+        "{BOLD}start training{RESET} - parameters: {} \n{}",
+        model.num_params(),
+        config
+    );
+
+    let start = Instant::now();
     for epoch in 0..config.n_epochs {
         // evaluate validation loss
         // TODO: only inference
@@ -57,7 +64,6 @@ pub fn train<B: AutodiffBackend>(
             let loss = model.loss(logits, y.clone());
             loss.into_scalar().elem::<f64>()
         };
-        let now = Instant::now();
         let mut loss_sum = 0.0;
         for _ in 0..config.epoch_size {
             let (x, y) = get_batch(
@@ -78,7 +84,7 @@ pub fn train<B: AutodiffBackend>(
             model = optimizer.step(config.learning_rate, model, grads);
         }
 
-        let elapsed = now.elapsed();
+        let elapsed = start.elapsed();
         let format_duration = |duration: Duration| {
             let seconds = duration.as_secs() % 60;
             let minutes = (duration.as_secs() / 60) % 60;
@@ -86,12 +92,33 @@ pub fn train<B: AutodiffBackend>(
             format!("{hours:02}:{minutes:02}:{seconds:02}")
         };
         println!(
-            "epoch {epoch:03}/{:03}: train loss: {:.4}, val loss: {:.4} ({})",
+            "epoch {:>3}/{}: train loss: {:.4}, val loss: {:.4} ({}/{})",
+            epoch + 1,
             config.n_epochs,
             loss_sum / config.epoch_size as f32,
             loss_val,
-            format_duration(elapsed)
+            format_duration(elapsed),
+            format_duration(elapsed.mul_f64(config.n_epochs as f64 / (epoch + 1) as f64)),
         );
+
+        if save_checkpoints && (epoch - 4) % 10 == 0 {
+            let model_path = format!(
+                ".data/checkpoints/{}_{epoch}",
+                std::time::UNIX_EPOCH.elapsed().unwrap().as_secs(),
+            );
+
+            println!("{BOLD}store checkpoint model to: {model_path}{RESET}");
+            fs::create_dir_all(&model_path).ok();
+
+            /* Uncomment to use `SimpleVowelTokenizer` */
+            // tokenizer.save(&format!("{model_path}/tokenizer.bin"));
+
+            config.save(format!("{model_path}/config.json")).unwrap();
+            model
+                .clone()
+                .save_file(format!("{model_path}/model"), &CompactRecorder::new())
+                .unwrap();
+        }
     }
 
     model

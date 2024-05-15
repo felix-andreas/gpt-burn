@@ -32,17 +32,23 @@ fn main() {
         Commands::Train {
             dataset_path: data_path,
             model_path,
+            batch_size,
+            n_epochs,
             n_mega_bytes,
             context_length,
             n_layers,
             n_heads,
             d_model,
-            save,
+            learning_rate,
+            save_model,
         } => {
-            // cli argument defaults
+            // cli option defaults
             let data_path = data_path.as_deref().unwrap_or(".data/corpus.txt");
-            // hyperparameters
             let n_bytes = n_mega_bytes.unwrap_or(10) << 20;
+            // hyperparameters
+            let n_epochs = n_epochs.unwrap_or(50);
+            let batch_size = batch_size.unwrap_or(50);
+            let learning_rate = learning_rate.unwrap_or(3e-4);
             let context_length = context_length.unwrap_or(128);
             let n_layers = n_layers.unwrap_or(6);
             let n_heads = n_heads.unwrap_or(6);
@@ -99,12 +105,12 @@ fn main() {
 
             // train
             let config = TrainingConfig {
-                n_epochs: 2,
+                n_epochs: n_epochs,
                 epoch_size: 100,
-                batch_size: 64,
+                batch_size,
                 eval_size: 128,
                 seed: 0,
-                learning_rate: 3e-4,
+                learning_rate,
                 model: ModelConfig {
                     context_length: 128,
                     vocab_size: tokenizer.vocab_size(),
@@ -116,10 +122,10 @@ fn main() {
                 },
                 optimizer: AdamWConfig::new(),
             };
-            let model = gpt_burn::train(&config, data_train, data_test);
+            let model = gpt_burn::train(&config, data_train, data_test, save_model);
 
             // store trained model
-            if save {
+            if save_model {
                 let model_path = model_path.unwrap_or_else(|| {
                     format!(
                         ".data/gpt_{}k_{}context_{}",
@@ -200,6 +206,12 @@ enum Commands {
         #[arg(short, long)]
         n_mega_bytes: Option<u64>,
         #[arg(short, long)]
+        n_epochs: Option<usize>,
+        #[arg(short, long)]
+        batch_size: Option<usize>,
+        #[arg(short, long)]
+        learning_rate: Option<f64>,
+        #[arg(short, long)]
         context_length: Option<usize>,
         #[arg(short, long)]
         n_layers: Option<usize>,
@@ -208,7 +220,7 @@ enum Commands {
         #[arg(short, long)]
         d_model: Option<usize>,
         #[arg(short, long)]
-        save: bool,
+        save_model: bool,
     },
     /// Generate text using pre-trained model
     Run {

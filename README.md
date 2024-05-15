@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🤖 GPT-Burn
+# GPT-Burn 🔥
 
 ### Implementation of the GPT architecture in [Burn](https://burn.dev/) 🦀.
 
@@ -36,7 +36,6 @@ Options:
   -h, --help  Print help
 ```
 
-
 ```
 Usage: gpt-burn train [OPTIONS]
 
@@ -44,8 +43,13 @@ Options:
   -d, --dataset-path <DATASET_PATH>
   -m, --model-path <MODEL_PATH>
   -n, --n-mega-bytes <N_MEGA_BYTES>
+  -n, --n-epochs <N_EPOCHS>
+  -l, --learning-rate <LEARNING_RATE>
   -c, --context-length <CONTEXT_LENGTH>
-  -s, --save
+  -n, --n-layers <N_LAYERS>
+  -n, --n-heads <N_HEADS>
+  -d, --d-model <D_MODEL>
+  -s, --save-model
 ```
 
 ```
