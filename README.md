@@ -6,24 +6,68 @@
 
 </div>
 
-## Usage
+## Installation
 
-You can install `gpt-burn` with Nix:
+You can install `gpt-burn` with [Nix](https://nixos.org/):
 
-```
+```sh
 nix run github:felix-andreas/gpt-burn
 ```
 
-instructions
+Alternatively, clone the repo and build from source:
+
+```sh
+nix develop # optional
+cargo run --release
 ```
+
+If you don't use [Nix](https://nixos.org/) and are on a Ubuntu-based distro, you need to install these additional dependencies:
+
+```sh
 apt install pkg-config libssl-dev libvulkan1 mesa-vulkan-drivers vulkan-tools
+```
+
+## Inference
+
+I trained a toy model with a character-level tokenizer on the [German Wikipedia corpus](https://github.com/GermanT5/wikipedia2corpus) for 20,000 batches (batch size of 128) with the following parameters:
+
+| Parameter      | Value  |
+| -------------- | ------ |
+| parameters     | 83M    |
+| context length | 128    |
+| `n_layers`     | 12     |
+| `n_heads`      | 12     |
+| `d_model`      | 768    |
+
+You can download it [here](https://drive.usercontent.google.com/download?id=1GGLaPnmPQ8Z2B9vJQoI6-K128X9LJKG0&export=download) and extract it afterward. Or, do both in a single command:
+
+```sh
+curl -s 'https://drive.usercontent.google.com/download?id=1GGLaPnmPQ8Z2B9vJQoI6-K128X9LJKG0&export=download&confirm=t' | tar xzf - --one-top-level=model_93M.tar.gz
+```
+
+Then, run the model:
+
+```sh
+gpt-burn run ./model_93M
+```
+
+You should see something along these lines:
+
+```
+Platin war als Ergänzen die deutsch-amerikanische Konzeptlosigkeit forciert, die zusammen im Zentrum der Ökonomie und der Politikwissenschaft führen.
+Eine große Vorlage zufolge war bei der Einführung von Lise Meitners im ICE 3 nicht mehr möglich.
 ```
 
 ## Training
 
-download from https://github.com/GermanT5/wikipedia2corpus
+To train your own model, run:
 
-TODO
+```
+gpt-burn train --context-length 128 --n-layers 12 --n-heads 12 --d-model 768 --batch-size 128 --learning-rate 0.0003 --seed 0 --text-corpus ./corpus.txt
+```
+
+> [!IMPORTANT]  
+> Make sure `corpus.txt` is a utf-8 encoded text file!
 
 ## Tokenizer
 
