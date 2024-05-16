@@ -41,7 +41,7 @@ Values: [28, 13, 3, 6, 19, 21, 1, 32, 10, 15, 20, 21, 6, 10, 15, 1, 24, 2, 19, 1
 
 ### Simple-vowel tokenizer
 
-The SimpleVowelTokenizer splits words before the next vowel if the chunk is longer than three characters, creating a result that resembles syllables:
+The `SimpleVowelTokenizer` splits words before the next vowel if the chunk is longer than three characters, creating a result that resembles syllables:
 
 ```
 Tokens: ["Albert", " ", "Einst", "ein", " ", "war", " ", "ein", " ", "schw", "eizer", "isch", "-", "US", "-", "amer", "ikan", "isch", "er", " ", "theor", "etisch", "er", " ", "Phys", "iker", " ", "deutsch", "er", " ", "Herk", "unft"]

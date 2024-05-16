@@ -46,7 +46,7 @@ fn main() {
             let data_path = text_corpus
                 .as_deref()
                 .unwrap_or(Path::new(".data/corpus.txt"));
-            let n_bytes = mega_bytes.unwrap_or(10) << 20;
+            let n_bytes = mega_bytes.unwrap_or(999) << 30;
             let save = !no_save;
             // training parameters
             let n_epochs = epochs.unwrap_or(50);

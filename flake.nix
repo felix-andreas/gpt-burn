@@ -102,7 +102,7 @@
               evcxr
               rust-toolchain
               # Python
-              (python311.withPackages (p: with p; [ black httpx ipykernel ipython isort matplotlib numpy pytorch tqdm ]))
+              (python311.withPackages (p: with p; [ black httpx ipykernel ipython isort matplotlib numpy pytorch tqdm transformers ]))
             ]
             ++ nativeDeps;
 
