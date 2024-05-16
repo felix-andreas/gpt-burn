@@ -14,6 +14,11 @@ You can install `gpt-burn` with Nix:
 nix run github:felix-andreas/gpt-burn
 ```
 
+instructions
+```
+apt install pkg-config libssl-dev libvulkan1 mesa-vulkan-drivers vulkan-tools
+```
+
 ## Training
 
 download from https://github.com/GermanT5/wikipedia2corpus
