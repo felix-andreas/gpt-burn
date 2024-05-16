@@ -65,19 +65,18 @@
           ];
           commonArgs = {
             pname = "crate";
-            # we don't want to use our version tag here because it would force a rebuild for every commit
             version = "0.1";
-            src = fs.toSource {
-              root = ./.;
-              fileset = cargoFiles;
-            };
             nativeBuildInputs = with pkgs; (
               nativeDeps
-              ++ l.optionals (pkgs.stdenv.isLinux) [ clang ]
+              ++ l.optionals stdenv.isLinux [ clang ]
             );
           };
           crateDepsOnly = craneLib.buildDepsOnly (commonArgs // {
             cargoCheckCommandcargo = "check --profile release --all-targets --all-features";
+            src = fs.toSource {
+              root = ./.;
+              fileset = cargoFiles;
+            };
           });
           crateClippy = craneLib.cargoClippy (commonArgs // {
             cargoArtifacts = crateDepsOnly;
@@ -128,6 +127,9 @@
                 rustFiles
               ]);
             };
+            postFixup = with pkgs; lib.optionalString stdenv.isLinux ''
+              patchelf --add-rpath ${vulkan-loader}/lib $out/bin/*
+            '';
           });
         });
     in

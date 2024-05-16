@@ -42,7 +42,7 @@ I trained a toy model with a character-level tokenizer on the [German Wikipedia 
 You can download it [here](https://drive.usercontent.google.com/download?id=1GGLaPnmPQ8Z2B9vJQoI6-K128X9LJKG0&export=download) and extract it afterward. Or, do both in a single command:
 
 ```sh
-curl -s 'https://drive.usercontent.google.com/download?id=1GGLaPnmPQ8Z2B9vJQoI6-K128X9LJKG0&export=download&confirm=t' | tar xzf - --one-top-level=model_93M.tar.gz
+curl -s 'https://drive.usercontent.google.com/download?id=1GGLaPnmPQ8Z2B9vJQoI6-K128X9LJKG0&export=download&confirm=t' | tar xzf - --one-top-level=model_93M
 ```
 
 Then, run the model:
