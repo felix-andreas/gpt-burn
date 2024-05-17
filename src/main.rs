@@ -12,12 +12,12 @@ use {
     gpt_burn::{
         model::{Model, ModelConfig},
         tokenizer::{CharTokenizer, Tokenizer},
-        TrainingConfig, BOLD, EXAMPLE_TEXT, RESET,
+        TrainingConfig, BOLD, RESET,
     },
     std::{
         fs::{self, File},
         io::Read,
-        path::{Path, PathBuf},
+        path::PathBuf,
     },
 };
 
@@ -32,41 +32,34 @@ fn main() {
             text_corpus,
             output_path,
             no_save,
+            n_steps,
             batch_size,
-            epochs,
-            mega_bytes,
+            n_mega_bytes,
             context_length,
             d_model,
             n_layers,
             n_heads,
             learning_rate,
             seed,
+            ..
         } => {
             // cli option defaults
-            let data_path = text_corpus
-                .as_deref()
-                .unwrap_or(Path::new(".data/corpus.txt"));
-            let n_bytes = mega_bytes.unwrap_or(999) << 20;
             let save = !no_save;
-            // training parameters
-            let n_epochs = epochs.unwrap_or(50);
-            let batch_size = batch_size.unwrap_or(64);
-            let learning_rate = learning_rate.unwrap_or(3e-4);
-            // model parameters
-            let context_length = context_length.unwrap_or(128);
-            let d_model = d_model.unwrap_or(384);
-            let n_layers = n_layers.unwrap_or(6);
-            let n_heads = n_heads.unwrap_or(6);
 
             // load text corpus and tokenizer
             println!(
-                "{BOLD}load {} MiB data from: {data_path:?}{RESET}",
-                n_bytes >> 20
+                "{BOLD}load {} file {text_corpus:?}{RESET} as dataset",
+                n_mega_bytes.map_or_else(
+                    || "entire".to_string(),
+                    |n_mega_bytes| format!("first {n_mega_bytes} MiB of")
+                )
             );
             let (data_train, data_test, tokenizer) = {
                 let device = <Autodiff<B> as Backend>::Device::default();
 
-                let mut file = File::open(data_path).unwrap().take(n_bytes);
+                let mut file = File::open(text_corpus)
+                    .unwrap()
+                    .take(n_mega_bytes.unwrap_or(999) << 20);
                 let mut text = String::new();
                 file.read_to_string(&mut text).unwrap();
 
@@ -76,7 +69,7 @@ fn main() {
                     .filter(|char| tokenizer.ttoi.contains_key(char))
                     .collect::<String>();
 
-                /* Alternatively use `SimpleVowelTokenizer` */
+                /* Uncomment to use `SimpleVowelTokenizer` */
                 // let tokenizer = {
                 //     let tokens = SimpleVowelTokenizer::tokenize(&text).collect::<Vec<_>>();
                 //     SimpleVowelTokenizer::new(&tokens, vocab_size)
@@ -109,9 +102,9 @@ fn main() {
 
             // train
             let config = TrainingConfig {
-                n_epochs,
+                n_steps,
                 batch_size,
-                epoch_size: 100,
+                batches_per_step: 100,
                 validation_size: 128,
                 seed,
                 learning_rate,
@@ -159,8 +152,8 @@ fn main() {
             gpt_burn::run(
                 &model,
                 &tokenizer,
-                EXAMPLE_TEXT,
-                2000,
+                "\n",
+                200,
                 config.model.context_length,
                 seed,
             );
@@ -170,6 +163,7 @@ fn main() {
             prompt,
             n_new_tokens,
             seed,
+            ..
         } => {
             let device = <B as Backend>::Device::default();
 
@@ -187,8 +181,8 @@ fn main() {
             gpt_burn::run(
                 &model,
                 &tokenizer,
-                &prompt.unwrap_or(EXAMPLE_TEXT.into()),
-                n_new_tokens.unwrap_or(1000),
+                &prompt.unwrap_or("\n".into()),
+                n_new_tokens,
                 config.model.context_length,
                 seed,
             );
@@ -197,48 +191,57 @@ fn main() {
 }
 
 #[derive(Parser)]
+#[clap(disable_help_flag = true)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+    #[clap(long, action = clap::ArgAction::HelpLong)]
+    help: Option<bool>,
 }
 
 #[derive(Subcommand)]
 enum Commands {
     /// Train a new model
     Train {
-        #[arg(short, long, value_name = "PATH")]
+        #[arg(short = 'o', long, value_name = "PATH")]
         output_path: Option<PathBuf>,
-        #[arg(short, long)]
-        context_length: Option<usize>,
-        #[arg(short, long)]
-        d_model: Option<usize>,
-        #[arg(short = 'l', long)]
-        n_layers: Option<usize>,
-        #[arg(short, long)]
-        n_heads: Option<usize>,
-        #[arg(short, long, value_name = "PATH")]
-        text_corpus: Option<PathBuf>,
-        #[arg(short, long)]
-        mega_bytes: Option<u64>,
-        #[arg(short, long)]
-        epochs: Option<usize>,
-        #[arg(short, long)]
-        batch_size: Option<usize>,
-        #[arg(short = 'r', long)]
-        learning_rate: Option<f64>,
-        #[arg(short, long, default_value_t = 0)]
+        #[arg(short = 'c', long, default_value_t = 64)]
+        context_length: usize,
+        #[arg(short = 'd', long, default_value_t = 64)]
+        d_model: usize,
+        #[arg(short = 'l', long, default_value_t = 2)]
+        n_layers: usize,
+        #[arg(short = 'h', long, default_value_t = 2)]
+        n_heads: usize,
+        #[arg(short = 'n', long, default_value_t = 50)]
+        n_steps: usize,
+        #[arg(short = 'b', long, default_value_t = 32)]
+        batch_size: usize,
+        #[arg(short = 'r', long, default_value_t = 0.003)]
+        learning_rate: f64,
+        #[arg(short = 's', long, default_value_t = 0)]
         seed: u64,
+        #[arg(short = 't', long, default_value = ".data/corpus.txt")]
+        text_corpus: PathBuf,
+        /// Only use first <n> megabytes of dataset for training
+        #[arg(short = 'm', long)]
+        n_mega_bytes: Option<u64>,
+        /// Don't save trained model (useful for debugging)
         #[arg(short = 'x', long)]
         no_save: bool,
+        #[arg(long , action = clap::ArgAction::HelpLong)]
+        help: Option<bool>,
     },
-    /// Generate text using pre-trained model
+    /// Generate text using a pre-trained model
     Run {
         model_path: String,
         #[arg(short, long)]
         prompt: Option<String>,
-        #[arg(short, long)]
-        n_new_tokens: Option<usize>,
+        #[arg(short, long, default_value_t = 1000)]
+        n_new_tokens: usize,
         #[arg(short, long, default_value_t = 0)]
         seed: u64,
+        #[arg(long , action = clap::ArgAction::HelpLong)]
+        help: Option<bool>,
     },
 }

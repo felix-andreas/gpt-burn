@@ -42,20 +42,21 @@ I trained a toy model with a character-level tokenizer on the [German Wikipedia 
 You can download it [here](https://drive.usercontent.google.com/download?id=1GGLaPnmPQ8Z2B9vJQoI6-K128X9LJKG0&export=download) and extract it afterward. Or, do both in a single command:
 
 ```sh
-curl -s 'https://drive.usercontent.google.com/download?id=1GGLaPnmPQ8Z2B9vJQoI6-K128X9LJKG0&export=download&confirm=t' | tar xzf - --one-top-level=model_93M
+curl -s 'https://drive.usercontent.google.com/download?id=1GGLaPnmPQ8Z2B9vJQoI6-K128X9LJKG0&export=download&confirm=t' | tar xzf -
 ```
 
 Then, run the model:
 
 ```sh
-gpt-burn run ./model_93M
+gpt-burn run ./model_83M
 ```
 
 You should see something along these lines:
 
 ```
-Platin war als Ergänzen die deutsch-amerikanische Konzeptlosigkeit forciert, die zusammen im Zentrum der Ökonomie und der Politikwissenschaft führen.
-Eine große Vorlage zufolge war bei der Einführung von Lise Meitners im ICE 3 nicht mehr möglich.
+So wurden bis 1977 679 nachhaltige Wörgler Torbauten vorgeworfen, die Einwohnerzahl Sirkes bestand 2015 bis 1998.
+Sie war trotz weniger als 10.000 ausgedehnter Größen wahrscheinlich auf folgende Breitenauflagen mit 932 km.
+2016 wurden rund 145 Händen nach Deutschland geladen.
 ```
 
 ## Training
@@ -66,7 +67,7 @@ To train your own model, run:
 gpt-burn train --context-length 128 --n-layers 12 --n-heads 12 --d-model 768 --batch-size 128 --learning-rate 0.0003 --seed 0 --text-corpus ./corpus.txt
 ```
 
-> [!IMPORTANT]  
+> [!IMPORTANT]
 > Make sure `corpus.txt` is a utf-8 encoded text file!
 
 ## Tokenizer
@@ -108,9 +109,6 @@ Commands:
   train  Train a new model
   run    Generate text using a pre-trained model
   help   Print this message or the help of the given subcommand(s)
-
-Options:
-  -h, --help  Print help
 ```
 
 For inference, you can pass a model path and the number of new tokens that should be generated:
@@ -123,7 +121,7 @@ Arguments:
 
 Options:
   -p, --prompt <PROMPT>
-  -n, --n-new-tokens <N_NEW_TOKENS>
+  -n, --n-new-tokens <N_NEW_TOKENS>  [default: 1000]
   -s, --seed <SEED>                  [default: 0]
 ```
 
@@ -134,17 +132,17 @@ Usage: gpt-burn train [OPTIONS]
 
 Options:
   -o, --output-path <PATH>
-  -c, --context-length <CONTEXT_LENGTH>
-  -d, --d-model <D_MODEL>
-  -l, --n-layers <N_LAYERS>
-  -n, --n-heads <N_HEADS>
-  -t, --text-corpus <PATH>
-  -m, --mega-bytes <MEGA_BYTES>
-  -e, --epochs <EPOCHS>
-  -b, --batch-size <BATCH_SIZE>
-  -r, --learning-rate <LEARNING_RATE>
+  -c, --context-length <CONTEXT_LENGTH>  [default: 64]
+  -d, --d-model <D_MODEL>                [default: 64]
+  -l, --n-layers <N_LAYERS>              [default: 2]
+  -h, --n-heads <N_HEADS>                [default: 2]
+  -n, --n-steps <N_STEPS>                [default: 50]
+  -b, --batch-size <BATCH_SIZE>          [default: 32]
+  -r, --learning-rate <LEARNING_RATE>    [default: 0.003]
   -s, --seed <SEED>                      [default: 0]
-  -x, --no-save
+  -t, --text-corpus <TEXT_CORPUS>        [default: .data/corpus.txt]
+  -m, --n-mega-bytes <N_MEGA_BYTES>      Only use first <n> megabytes of dataset for training
+  -x, --no-save                          Don't save trained model (useful for debugging)
 ```
 
 ## References

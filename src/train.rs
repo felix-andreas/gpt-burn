@@ -19,10 +19,10 @@ use {
 
 #[derive(Config)]
 pub struct TrainingConfig {
-    pub n_epochs: usize,
+    pub n_steps: usize,
     pub batch_size: usize,
     pub learning_rate: f64,
-    pub epoch_size: usize,
+    pub batches_per_step: usize,
     pub validation_size: usize,
     pub seed: u64,
     pub model: ModelConfig,
@@ -49,7 +49,7 @@ pub fn train<B: AutodiffBackend>(
         config
     );
     let start = Instant::now();
-    for epoch in 0..config.n_epochs {
+    for step in 0..config.n_steps {
         // evaluate validation loss
         let loss_val = {
             let (x, y) = get_batch(
@@ -65,7 +65,7 @@ pub fn train<B: AutodiffBackend>(
         };
 
         let mut loss_sum = 0.0;
-        for _ in 0..config.epoch_size {
+        for _ in 0..config.batches_per_step {
             let (x, y) = get_batch(
                 &mut rng,
                 data_train.clone(),
@@ -93,18 +93,18 @@ pub fn train<B: AutodiffBackend>(
             format!("{hours:02}:{minutes:02}:{seconds:02}")
         };
         println!(
-            "epoch {:>3}/{}: train loss: {:.4}, val loss: {:.4} ({}/{})",
-            epoch + 1,
-            config.n_epochs,
-            loss_sum / config.epoch_size as f32,
+            "step {:>3}/{}: train loss: {:.4}, val loss: {:.4} ({}/{})",
+            step + 1,
+            config.n_steps,
+            loss_sum / config.batches_per_step as f32,
             loss_val,
             format_duration(elapsed),
-            format_duration(elapsed.mul_f64(config.n_epochs as f64 / (epoch + 1) as f64)),
+            format_duration(elapsed.mul_f64(config.n_steps as f64 / (step + 1) as f64)),
         );
 
-        if save_checkpoints && (epoch - 4) % 10 == 0 {
+        if save_checkpoints && (step - 4) % 10 == 0 {
             let model_path = format!(
-                ".data/checkpoints/{}_{epoch}",
+                ".data/checkpoints/{}_{step}",
                 std::time::UNIX_EPOCH.elapsed().unwrap().as_secs(),
             );
 
