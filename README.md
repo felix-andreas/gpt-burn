@@ -8,7 +8,17 @@
 
 This project aims to be a clean and concise re-implementation of [GPT-2](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf). The model implementation, contained in [`src/model.rs`](src/model.rs), is under 300 lines of code. While this was a fun exercise mostly for (my own) educational purposes, it demonstrates the utility of Rust and Burn in the machine learning domain: The entire project compiles into a single binary, making deployment relatively straightforward.
 
-The project also includes a simple CLI for training and inference. At the moment, only a character-level tokenizer is supported, so official weights requiring a BPE tokenizer cannot be used yet. However, for fun, you can try out the small toy model I trained ([see inference](#inference)).
+At the moment, only a character-level tokenizer is supported, so official weights requiring a BPE tokenizer cannot be used yet. However, for fun, you can try out the small toy model I trained ([see inference](#inference)). 
+
+The project also includes a simple CLI for training and inference. 
+
+```
+Usage: gpt-burn <COMMAND>
+
+Commands:
+  run    Generate text using a pre-trained model
+  train  Train a new model
+```
 
 ## Installation
 
@@ -69,6 +79,20 @@ Sie war trotz weniger als 10.000 ausgedehnter Größen wahrscheinlich auf folgen
 2016 wurden rund 145 Händen nach Deutschland geladen.
 ```
 
+Further command line options are:
+
+```
+Usage: gpt-burn run [OPTIONS] <MODEL_PATH>
+
+Arguments:
+  <MODEL_PATH>
+
+Options:
+  -p, --prompt <PROMPT>
+  -n, --n-new-tokens <N_NEW_TOKENS>  [default: 1000]
+  -s, --seed <SEED>                  [default: 0]
+```
+
 ## Training
 
 To train your own model, run:
@@ -79,6 +103,26 @@ gpt-burn train --context-length 128 --n-layers 12 --n-heads 12 --d-model 768 --b
 
 > [!IMPORTANT]
 > Make sure `corpus.txt` is a utf-8 encoded text file!
+
+You can pass most hyperparameters as a command-line option:
+
+```
+Usage: gpt-burn train [OPTIONS]
+
+Options:
+  -o, --output-path <PATH>
+  -c, --context-length <CONTEXT_LENGTH>  [default: 64]
+  -d, --d-model <D_MODEL>                [default: 64]
+  -l, --n-layers <N_LAYERS>              [default: 2]
+  -h, --n-heads <N_HEADS>                [default: 2]
+  -n, --n-steps <N_STEPS>                [default: 50]
+  -b, --batch-size <BATCH_SIZE>          [default: 32]
+  -r, --learning-rate <LEARNING_RATE>    [default: 0.003]
+  -s, --seed <SEED>                      [default: 0]
+  -t, --text-corpus <TEXT_CORPUS>        [default: .data/corpus.txt]
+  -m, --n-mega-bytes <N_MEGA_BYTES>      Only use first <n> megabytes of dataset for training
+  -x, --no-save                          Don't save trained model (useful for debugging)
+```
 
 ## Tokenizer
 
@@ -106,53 +150,6 @@ The `SimpleVowelTokenizer` splits words before the next vowel if the chunk is lo
 ```
 Tokens: ["Albert", " ", "Einst", "ein", " ", "war", " ", "ein", " ", "schw", "eizer", "isch", "-", "US", "-", "amer", "ikan", "isch", "er", " ", "theor", "etisch", "er", " ", "Phys", "iker", " ", "deutsch", "er", " ", "Herk", "unft"]
 Values: [2, 0, 3, 9, 0, 19, 0, 9, 0, 16, 10, 15, 1, 6, 1, 7, 13, 15, 11, 0, 17, 12, 11, 0, 5, 14, 0, 8, 11, 0, 4, 18]
-```
-
-## CLI options
-
-The `gpt-burn` command has multiple subcommands:
-
-```
-Usage: gpt-burn <COMMAND>
-
-Commands:
-  train  Train a new model
-  run    Generate text using a pre-trained model
-  help   Print this message or the help of the given subcommand(s)
-```
-
-For inference, you can pass a model path and the number of new tokens that should be generated:
-
-```
-Usage: gpt-burn run [OPTIONS] <MODEL_PATH>
-
-Arguments:
-  <MODEL_PATH>
-
-Options:
-  -p, --prompt <PROMPT>
-  -n, --n-new-tokens <N_NEW_TOKENS>  [default: 1000]
-  -s, --seed <SEED>                  [default: 0]
-```
-
-For training, you can pass most hyperparameters as a command-line option:
-
-```
-Usage: gpt-burn train [OPTIONS]
-
-Options:
-  -o, --output-path <PATH>
-  -c, --context-length <CONTEXT_LENGTH>  [default: 64]
-  -d, --d-model <D_MODEL>                [default: 64]
-  -l, --n-layers <N_LAYERS>              [default: 2]
-  -h, --n-heads <N_HEADS>                [default: 2]
-  -n, --n-steps <N_STEPS>                [default: 50]
-  -b, --batch-size <BATCH_SIZE>          [default: 32]
-  -r, --learning-rate <LEARNING_RATE>    [default: 0.003]
-  -s, --seed <SEED>                      [default: 0]
-  -t, --text-corpus <TEXT_CORPUS>        [default: .data/corpus.txt]
-  -m, --n-mega-bytes <N_MEGA_BYTES>      Only use first <n> megabytes of dataset for training
-  -x, --no-save                          Don't save trained model (useful for debugging)
 ```
 
 ## References

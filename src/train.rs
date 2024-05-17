@@ -111,9 +111,6 @@ pub fn train<B: AutodiffBackend>(
             println!("{BOLD}store checkpoint model to: {model_path}{RESET}");
             fs::create_dir_all(&model_path).ok();
 
-            /* Uncomment to use `SimpleVowelTokenizer` */
-            // tokenizer.save(&format!("{model_path}/tokenizer.bin"));
-
             config.save(format!("{model_path}/config.json")).unwrap();
             model
                 .clone()

@@ -135,7 +135,6 @@ struct Block<B: Backend> {
 impl<B: Backend> Block<B> {
     fn forward(&self, input: Tensor<B, 3>) -> Tensor<B, 3> {
         let x = input.clone();
-
         let x = x.clone() + self.multi_head.forward(self.norm_1.forward(x));
         let x = x.clone() + self.pwff.forward(self.norm_2.forward(x));
 
@@ -230,8 +229,9 @@ impl<B: Backend> MultiHeadAttention<B> {
         let x = x.matmul(v);
         let x = x.swap_dims(1, 2).reshape([b, t, self.n_heads * self.d_k]);
         let x = self.resid_dropout.forward(x);
+        let x = self.out.forward(x);
 
-        self.out.forward(x)
+        x
     }
 }
 
@@ -282,6 +282,7 @@ impl<B: Backend> PositionWiseFeedForward<B> {
         let x = self.gelu.forward(x);
         let x = self.linear_2.forward(x);
         let x = self.dropout.forward(x);
+
         x
     }
 }

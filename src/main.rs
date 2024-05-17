@@ -22,12 +22,36 @@ use {
 };
 
 fn main() {
-    /* Alternatively use CPU backend */
-    // type B = burn::backend::ndarray::NdArray;
-    type B = Wgpu;
+    type B = Wgpu; // alternative backend: burn::backend::ndarray::NdArray
     type AutoB = Autodiff<B>;
 
     match Cli::parse().command {
+        Commands::Run {
+            model_path: path,
+            prompt,
+            n_new_tokens,
+            seed,
+            ..
+        } => {
+            let device = <B as Backend>::Device::default();
+
+            let tokenizer = CharTokenizer::new();
+            let config = TrainingConfig::load(path.join("config.json")).unwrap();
+            let model: Model<B> = config.model.init(&device).load_record(
+                CompactRecorder::new()
+                    .load(path.join("model"), &device)
+                    .unwrap(),
+            );
+
+            gpt_burn::run(
+                &model,
+                &tokenizer,
+                &prompt.unwrap_or("\n".into()),
+                n_new_tokens,
+                config.model.context_length,
+                seed,
+            );
+        }
         Commands::Train {
             text_corpus,
             output_path,
@@ -43,10 +67,7 @@ fn main() {
             seed,
             ..
         } => {
-            // cli option defaults
-            let save = !no_save;
-
-            // load text corpus and tokenizer
+            // load text corpus and instantiate tokenizer
             println!(
                 "{BOLD}load {} file {text_corpus:?}{RESET} as dataset",
                 n_mega_bytes.map_or_else(
@@ -68,12 +89,6 @@ fn main() {
                     .chars()
                     .filter(|char| tokenizer.ttoi.contains_key(char))
                     .collect::<String>();
-
-                /* Uncomment to use `SimpleVowelTokenizer` */
-                // let tokenizer = {
-                //     let tokens = SimpleVowelTokenizer::tokenize(&text).collect::<Vec<_>>();
-                //     SimpleVowelTokenizer::new(&tokens, vocab_size)
-                // };
 
                 let mut train = tokenizer.encode(&text);
                 let test = train.split_off((0.9 * train.len() as f32) as usize);
@@ -119,10 +134,10 @@ fn main() {
                 },
                 optimizer: AdamWConfig::new(),
             };
-            let model = gpt_burn::train(&config, data_train, data_test, save);
+            let model = gpt_burn::train(&config, data_train, data_test, !no_save);
 
             // save trained model
-            if save {
+            if !no_save {
                 let output_path = output_path.unwrap_or_else(|| {
                     format!(
                         ".data/gpt_{}k_{}context_{}",
@@ -136,9 +151,6 @@ fn main() {
                 println!("{BOLD}store trained model to: {output_path:?}{RESET}");
                 fs::remove_dir_all(&output_path).ok();
                 fs::create_dir_all(&output_path).ok();
-
-                /* Uncomment to use `SimpleVowelTokenizer` */
-                // tokenizer.save(&format!("{model_path}/tokenizer.bin"));
 
                 config.save(output_path.join("config.json")).unwrap();
                 model
@@ -158,35 +170,6 @@ fn main() {
                 seed,
             );
         }
-        Commands::Run {
-            model_path: path,
-            prompt,
-            n_new_tokens,
-            seed,
-            ..
-        } => {
-            let device = <B as Backend>::Device::default();
-
-            let tokenizer = CharTokenizer::new();
-
-            /* Alternatively use `SimpleVowelTokenizer` */
-            // let tokenizer = SimpleVowelTokenizer::load(&format!("{path}/tokenizer.bin"));
-
-            let config = TrainingConfig::load(format!("{path}/config.json")).unwrap();
-            let record = CompactRecorder::new()
-                .load(format!("{path}/model").into(), &device)
-                .unwrap();
-            let model: Model<B> = config.model.init(&device).load_record(record);
-
-            gpt_burn::run(
-                &model,
-                &tokenizer,
-                &prompt.unwrap_or("\n".into()),
-                n_new_tokens,
-                config.model.context_length,
-                seed,
-            );
-        }
     }
 }
 
@@ -201,6 +184,18 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Generate text using a pre-trained model
+    Run {
+        model_path: PathBuf,
+        #[arg(short, long)]
+        prompt: Option<String>,
+        #[arg(short, long, default_value_t = 1000)]
+        n_new_tokens: usize,
+        #[arg(short, long, default_value_t = 0)]
+        seed: u64,
+        #[arg(long , action = clap::ArgAction::HelpLong)]
+        help: Option<bool>,
+    },
     /// Train a new model
     Train {
         #[arg(short = 'o', long, value_name = "PATH")]
@@ -229,18 +224,6 @@ enum Commands {
         /// Don't save trained model (useful for debugging)
         #[arg(short = 'x', long)]
         no_save: bool,
-        #[arg(long , action = clap::ArgAction::HelpLong)]
-        help: Option<bool>,
-    },
-    /// Generate text using a pre-trained model
-    Run {
-        model_path: String,
-        #[arg(short, long)]
-        prompt: Option<String>,
-        #[arg(short, long, default_value_t = 1000)]
-        n_new_tokens: usize,
-        #[arg(short, long, default_value_t = 0)]
-        seed: u64,
         #[arg(long , action = clap::ArgAction::HelpLong)]
         help: Option<bool>,
     },
