@@ -6,12 +6,22 @@
 
 </div>
 
+This project aims to be a clean and concise re-implementation of [GPT-2](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf). The model implementation, contained in [`src/model.rs`](src/model.rs), is under 300 lines of code. While this was a fun exercise mostly for (my own) educational purposes, it demonstrates the utility of Rust and Burn in the machine learning domain: The entire project compiles into a single binary, making deployment relatively straightforward.
+
+The project also includes a simple CLI for training and inference. At the moment, only a character-level tokenizer is supported, so official weights requiring a BPE tokenizer cannot be used yet. However, for fun, you can try out the small toy model I trained ([see inference](#inference)).
+
 ## Installation
 
 You can install `gpt-burn` with [Nix](https://nixos.org/):
 
 ```sh
 nix run github:felix-andreas/gpt-burn
+```
+
+Or, install with `cargo`:
+
+```
+cargo install --git https://github.com/felix-andreas/gpt-burn
 ```
 
 Alternatively, clone the repo and build from source:
