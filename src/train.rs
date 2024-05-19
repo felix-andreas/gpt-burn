@@ -102,7 +102,7 @@ pub fn train<B: AutodiffBackend>(
             format_duration(elapsed.mul_f64(config.n_steps as f64 / (step + 1) as f64)),
         );
 
-        if save_checkpoints && (step - 4) % 10 == 0 {
+        if save_checkpoints && (step + 6) % 10 == 0 {
             let model_path = format!(
                 ".data/checkpoints/{}_{step}",
                 std::time::UNIX_EPOCH.elapsed().unwrap().as_secs(),
