@@ -68,7 +68,11 @@
             version = "0.1";
             nativeBuildInputs = with pkgs; (
               nativeDeps
-              ++ l.optionals stdenv.isLinux [ clang ]
+              ++ l.optional stdenv.isLinux clang
+              ++ l.optionals stdenv.isDarwin [
+                darwin.IOKit
+                darwin.apple_sdk.frameworks.QuartzCore
+              ]
             );
           };
           crateDepsOnly = craneLib.buildDepsOnly (commonArgs // {
